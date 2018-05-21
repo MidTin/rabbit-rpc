@@ -25,8 +25,6 @@ class ManageUtility(object):
         parser.add_argument('worker', help='start a server worker')
         # parser.add_argument('call', help='send remote call')
 
-        if len(self.argv) > 2:
-
         try:
             subcommand = self.argv[1]
             command = self.fetch_command(subcommand)

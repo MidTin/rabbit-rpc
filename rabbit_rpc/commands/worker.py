@@ -21,7 +21,7 @@ class Worker(BaseCommand):
             '--amqp', default='amqp://guest:guest@localhost:5672/',
             help='specify the broker url')
         parser.add_argument(
-            '--django', help='setup django')
+            '--django', help='setup django', action='store_true')
 
     def install_django(self):
         import django

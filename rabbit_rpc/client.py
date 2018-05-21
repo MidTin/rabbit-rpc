@@ -126,7 +126,7 @@ class RPCClient(Connector):
                 body=payload,
                 headers={'consumer_name': consumer_name})
 
-            logger.info('Sent remote call.')
+            logger.info('Sent remote call: %s', consumer_name)
             if not ignore_result:
                 try:
                     ret = self.get_response(corr_id, timeout)
