@@ -29,9 +29,7 @@ class RPCClient(Connector):
         self._ready = False
 
         self.event = Event()
-        self.event.wait()
-
-        logger.info('Client is ready..')
+        self.event.wait(0.5)
 
     def on_exchange_declareok(self, unused_frame):
         self.callback_queue = str(uuid.uuid4())
