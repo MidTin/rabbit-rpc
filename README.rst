@@ -40,7 +40,7 @@ Rabbit RPC
 
     # with django
 
-    rabbit_rpc worker --amqp 'amqp://guest:guest@localhost:5672/' --django
+    rabbit_rpc worker --amqp 'amqp://guest:guest@localhost:5672/' --django project
     
 
 

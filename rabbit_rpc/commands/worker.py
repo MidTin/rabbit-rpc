@@ -29,10 +29,12 @@ class Worker(BaseCommand):
             default='amqp://guest:guest@localhost:5672/',
             help='specify the broker url')
         parser.add_argument(
-            '--django', help='setup django', action='store_true')
+            '--django', help='setup django')
 
-    def install_django(self):
+    def install_django(self, project_name):
         import django
+
+        os.environ['DJANGO_SETTINGS_MODULE'] = project_name + '.settings'
         django.setup()
 
     def find_consumers(self, related_name='consumers'):
@@ -63,7 +65,7 @@ class Worker(BaseCommand):
         sys.path.append(os.getcwd())
 
         if options.get('django'):
-            self.install_django()
+            self.install_django(options['django'])
 
         consumers = self.find_consumers()
         if not consumers:
