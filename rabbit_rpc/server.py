@@ -10,8 +10,6 @@ logger = logging.getLogger(__name__)
 
 class RPCServer(Connector):
 
-    DEFUALT_QUEUE = 'default'
-
     def __init__(self, consumers, queue, *args, **kwargs):
         self._consumers = consumers
         self.default_queue = queue or self.DEFUALT_QUEUE
@@ -21,32 +19,38 @@ class RPCServer(Connector):
     def on_exchange_declareok(self, unused_frame):
         self.setup_queues()
 
+    def _setup_queue(self, queue_name):
+        dispatcher = MessageDispatcher(self._channel, self._exchange)
+        queue = Queue(queue_name, dispatcher)
+        self._queues[queue_name] = queue
+        return queue
+
+    def setup_default_queue(self):
+        return self._setup_queue(self.default_queue)
+
     def setup_queues(self):
         """Setup the queue on RabbitMQ by invoking the Queue.Declare RPC
         command.
 
         :param str|unicode queue_name: The name of the queue to declare.
         """
-        default_dispatcher = MessageDispatcher(self._channel, self._exchange)
-        self._queues[self.default_queue] = Queue(self.default_queue,
-                                                 default_dispatcher)
+        default_queue = self.setup_default_queue()
 
         for c in self._consumers:
-            try:
-                queue = self._queues[c.queue]
-                if queue.exclusive:
-                    raise ValueError(
-                        'Consumer %s is set exclusive with queue %s, but there '
-                        'are other consumers already exist.' % (c.name,
-                                                                queue.name))
 
-            except KeyError:
-                queue_name = c.queue or self.default_queue
+            if c.queue is None:
+                queue = default_queue
+            else:
+                try:
+                    queue = self._queues[c.queue]
+                    if queue.exclusive or c.exclusive:
+                        raise ValueError(
+                            'Consumer %s is set exclusive with queue %s, but there '
+                            'are other consumers already exist.' % (c.name,
+                                                                    queue.name))
 
-                dispatcher = MessageDispatcher(self._channel, self._exchange)
-                queue = Queue(queue_name, dispatcher, c.exclusive)
-
-                self._queues[queue.name] = queue
+                except KeyError:
+                    queue = self._setup_queue(c.queue)
 
             queue.add_consumer(c)
 

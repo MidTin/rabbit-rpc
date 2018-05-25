@@ -11,6 +11,7 @@ _lock = Lock()
 
 class Connector(object):
 
+    DEFUALT_QUEUE = 'default'
     EXCHANGE_TYPE = 'direct'
 
     def __init__(self, amqp_url, exchange='default'):

@@ -77,7 +77,7 @@ class Worker(BaseCommand):
         except KeyboardInterrupt:
             server.stop()
         except Exception as ex:
-            sys.stderr.write(ex + '\n')
+            sys.stderr.write(ex.message + '\n')
             sys.exit(1)
 
 
