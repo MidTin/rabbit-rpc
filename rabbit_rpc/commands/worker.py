@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from __future__ import absolute_import
+
 import importlib
 import imp
 import logging
@@ -18,10 +20,13 @@ class Worker(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '-Q', '--queue', default='default',
+            '-Q',
+            '--queue',
+            default='default',
             help='setup and bind to the specified queue')
         parser.add_argument(
-            '--amqp', default='amqp://guest:guest@localhost:5672/',
+            '--amqp',
+            default='amqp://guest:guest@localhost:5672/',
             help='specify the broker url')
         parser.add_argument(
             '--django', help='setup django', action='store_true')
@@ -42,31 +47,32 @@ class Worker(BaseCommand):
             if os.path.isdir(dirpath):
                 try:
                     module = find_related_module(dirpath, related_name)
+                    if module:
+                        for item in dir(module):
+                            c = getattr(module, item)
+                            if isinstance(c, Consumer):
+                                logger.info('[Consumer] %s.%s.%s', dirpath,
+                                            related_name, c.name)
+                                consumers.append(c)
                 except ImportError:
                     pass
-
-                if module:
-                    for item in dir(module):
-                        c = getattr(module, item)
-                        if isinstance(c, Consumer):
-                            logger.info(
-                                '[Consumer] %s.%s.%s', dirpath, related_name, c.name)
-                            consumers.append(c)
 
         return consumers
 
     def execute(self, **options):
+        sys.path.append(os.getcwd())
+
+        if options.get('django'):
+            self.install_django()
+
         consumers = self.find_consumers()
         if not consumers:
             sys.stderr.write('No consumer was detected.\n')
             sys.exit(1)
 
-        if options.get('django'):
-            self.install_django()
-
         try:
-            server = RPCServer(consumers, amqp_url=options['amqp'],
-                               queue=options['queue'])
+            server = RPCServer(
+                consumers, amqp_url=options['amqp'], queue=options['queue'])
             server.run()
         except KeyboardInterrupt:
             server.stop()
