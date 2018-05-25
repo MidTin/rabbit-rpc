@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 import importlib
 import imp
+import logging
 import os
 import sys
 
 from .base import BaseCommand
 from rabbit_rpc.consumer import Consumer
 from rabbit_rpc.server import RPCServer
+
+logger = logging.getLogger(__name__)
 
 
 class Worker(BaseCommand):
@@ -29,6 +32,7 @@ class Worker(BaseCommand):
 
     def find_consumers(self, related_name='consumers'):
         path = os.getcwd()
+        logger.info('Finding consumers...')
 
         consumers = []
         for dirpath in os.listdir(path):
@@ -36,11 +40,17 @@ class Worker(BaseCommand):
                 continue
 
             if os.path.isdir(dirpath):
-                module = find_related_module(dirpath, related_name)
+                try:
+                    module = find_related_module(dirpath, related_name)
+                except ImportError:
+                    pass
+
                 if module:
                     for item in dir(module):
                         c = getattr(module, item)
                         if isinstance(c, Consumer):
+                            logger.info(
+                                '[Consumer] %s.%s.%s', dirpath, related_name, c.name)
                             consumers.append(c)
 
         return consumers
