@@ -23,7 +23,7 @@ class BaseCommand(object):
         try:
             self.execute(**options)
         except Exception as ex:
-            sys.stderr.write('%s : %s' % (self.__class__.__name__, ex.message))
+            sys.stderr.write('%s: %s' % (self.__class__.__name__, ex.message))
             sys.exit(1)
 
     def execute(self, **options):

@@ -6,6 +6,8 @@ import imp
 import logging
 import os
 import sys
+import traceback
+
 
 from .base import BaseCommand
 from rabbit_rpc.consumer import Consumer
@@ -78,8 +80,8 @@ class Worker(BaseCommand):
             server.run()
         except KeyboardInterrupt:
             server.stop()
-        except Exception as ex:
-            sys.stderr.write(ex.message + '\n')
+        except Exception:
+            traceback.print_exc()
             sys.exit(1)
 
 
