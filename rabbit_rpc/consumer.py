@@ -19,7 +19,7 @@ class Consumer(object):
         self.queue = queue
         self.exclusive = exclusive
 
-    def consume(self, **kwargs):
+    def consume(self, *args, **kwargs):
         pass
 
     def __str__(self):
