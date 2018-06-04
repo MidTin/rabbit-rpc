@@ -62,6 +62,8 @@ class Connector(object):
         if self._closing:
             self._connection.ioloop.stop()
         else:
+            logger.info(
+                'Connection was closed unexpected, we will try to reconnect it..')
             self._connection.add_timeout(1, self.reconnect)
 
     def reconnect(self):

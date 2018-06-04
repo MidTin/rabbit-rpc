@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 import json
-from threading import Thread, Event
+from threading import Thread
 import time
 import uuid
 
@@ -22,14 +22,23 @@ class RPCClient(Connector):
         self.callback_queue = None
         self._results = {}
 
-        self.t = Thread(target=self.run)
-        self.t.daemon = True
-        self.t.start()
+        self._loop_thread = Thread(target=self.run)
+        self._loop_thread.daemon = True
+        self._loop_thread.start()
 
-        self._ready = False
+        self.ready = False
 
-        self.event = Event()
-        self.event.wait(0.5)
+        self.wait_for_ready()
+
+    def wait_for_ready(self):
+        while not self.ready:
+            time.sleep(0.1)
+            continue
+
+        logger.info('RPCClient is ready...')
+
+    def set_ready(self):
+        self.ready = True
 
     def on_exchange_declareok(self, unused_frame):
         self.callback_queue = str(uuid.uuid4())
@@ -37,8 +46,7 @@ class RPCClient(Connector):
         self._channel.basic_consume(
             self.on_response, no_ack=True, queue=self.callback_queue)
 
-        self.event.set()
-        self.event.clear()
+        self.set_ready()
 
     def setup_queue(self,
                     queue_name,
