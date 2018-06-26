@@ -22,11 +22,11 @@ class RPCClient(Connector):
         self.callback_queue = None
         self._results = {}
 
+        self.ready = False
+
         self._loop_thread = Thread(target=self.run)
         self._loop_thread.daemon = True
         self._loop_thread.start()
-
-        self.ready = False
 
         self.wait_for_ready()
 
