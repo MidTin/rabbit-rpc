@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 import logging
 import json
-from threading import Thread
+import threading
 import time
+from time import monotonic as _time
 import uuid
 
 import pika
@@ -22,23 +23,39 @@ class RPCClient(Connector):
         self.callback_queue = None
         self._results = {}
 
-        self.ready = False
+        self._ready = False
 
-        self._loop_thread = Thread(target=self.run)
+        self._loop_thread = threading.Thread(target=self.run)
         self._loop_thread.daemon = True
         self._loop_thread.start()
 
         self.wait_for_ready()
 
-    def wait_for_ready(self):
-        while not self.ready:
-            time.sleep(0.1)
-            continue
+    def wait_for_ready(self, timeout=None):
+        """Wait until a condition evaluates to True.
+
+        predicate should be a callable which result will be interpreted as a
+        boolean value.  A timeout may be provided giving the maximum time to
+        wait.
+
+        """
+        endtime = None
+        waittime = timeout
+        while not self._ready:
+            if waittime is not None:
+                if endtime is None:
+                    endtime = _time() + waittime
+                else:
+                    waittime = endtime - _time()
+                    if waittime <= 0:
+                        break
+            self.wait(waittime)
 
         logger.info('RPCClient is ready...')
+        return self._ready
 
     def set_ready(self):
-        self.ready = True
+        self._ready = True
 
     def on_exchange_declareok(self, unused_frame):
         self.callback_queue = str(uuid.uuid4())

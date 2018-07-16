@@ -1,14 +1,18 @@
 # -*- coding: utf-8 -*-
 import os
 from setuptools import find_packages, setup
+import six
 
 with open(os.path.join(os.path.dirname(__file__), 'requirements.txt')) as f:
     requires = f.readlines()
+    if six.PY2:
+        requires.append('futures==3.2.0')
 
 with open(os.path.join(os.path.dirname(__file__), 'README.rst')) as f:
     README = f.read()
 
 os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
+
 
 setup(
     name='rabbit-rpc',
