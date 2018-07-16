@@ -99,6 +99,9 @@ def find_related_module(package, related_name):
     except AttributeError:
         return
 
+    if not isinstance(pkg_path, list):
+        pkg_path = pkg_path._path
+
     try:
         imp.find_module(related_name, pkg_path)
     except ImportError:
