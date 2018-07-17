@@ -3,7 +3,7 @@ import logging
 import json
 import threading
 import time
-from time import monotonic as _time
+
 import uuid
 
 import pika
@@ -11,6 +11,7 @@ import pika
 from .base import Connector
 from .exceptions import (ERROR_FLAG, HAS_ERROR, NO_ERROR, RemoteFunctionError,
                          RemoteCallTimeout)
+from .utils import Condition
 
 logger = logging.getLogger(__name__)
 
@@ -24,34 +25,17 @@ class RPCClient(Connector):
         self._results = {}
 
         self._ready = False
+        self._lock = Condition()
 
         self._loop_thread = threading.Thread(target=self.run)
         self._loop_thread.daemon = True
         self._loop_thread.start()
 
-        self.wait_for_ready()
-
-    def wait_for_ready(self, timeout=None):
-        """Wait until a condition evaluates to True.
-
-        predicate should be a callable which result will be interpreted as a
-        boolean value.  A timeout may be provided giving the maximum time to
-        wait.
-
-        """
-        endtime = None
-        waittime = timeout
-        while not self._ready:
-            if waittime is not None:
-                if endtime is None:
-                    endtime = _time() + waittime
-                else:
-                    waittime = endtime - _time()
-                    if waittime <= 0:
-                        break
-            self.wait(waittime)
-
+        self._lock.acquire()
+        self._lock.wait_for(self.is_ready, 0.1)
         logger.info('RPCClient is ready...')
+
+    def is_ready(self):
         return self._ready
 
     def set_ready(self):

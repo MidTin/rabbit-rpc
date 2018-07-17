@@ -6,7 +6,7 @@ import six
 with open(os.path.join(os.path.dirname(__file__), 'requirements.txt')) as f:
     requires = f.readlines()
     if six.PY2:
-        requires.append('futures==3.2.0')
+        requires += ['futures==3.2.0', 'monotonic==1.5']
 
 with open(os.path.join(os.path.dirname(__file__), 'README.rst')) as f:
     README = f.read()
@@ -16,7 +16,7 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
     name='rabbit-rpc',
-    version='0.0.3',
+    version='0.0.4',
     packages=find_packages(),
     include_package_data=True,
     description='A simple rpc client/server library',
@@ -31,6 +31,7 @@ setup(
 
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
         'Programming Language :: Python :: Implementation :: CPython',
     ],
     entry_points={
