@@ -3,67 +3,45 @@ import logging
 import json
 import threading
 import time
-
 import uuid
 
 import pika
 
-from .base import Connector
 from .exceptions import (ERROR_FLAG, HAS_ERROR, NO_ERROR, RemoteFunctionError,
                          RemoteCallTimeout)
-from .utils import Condition
 
 logger = logging.getLogger(__name__)
 
 
-class RPCClient(Connector):
+class RPCClient(object):
 
-    def __init__(self, *args, **kwargs):
-        super(RPCClient, self).__init__(*args, **kwargs)
-
-        self.callback_queue = None
+    def __init__(self, amqp_url, exchange='default'):
         self._results = {}
 
-        self._ready = False
-        self._lock = Condition()
+        parameters = pika.URLParameters(amqp_url)
+        self._connection = pika.BlockingConnection(parameters)
 
-        self._loop_thread = threading.Thread(target=self.run)
-        self._loop_thread.daemon = True
-        self._loop_thread.start()
+        self._exchange = exchange
+        self._channel = self._connection.channel()
+        self._channel.exchange_declare(exchange=self._exchange)
+        ret = self._channel.queue_declare(exclusive=True, auto_delete=True)
+        self.callback_queue = ret.method.queue
 
-        self._lock.acquire()
-        self._lock.wait_for(self.is_ready, 0.1)
-        logger.info('RPCClient is ready...')
+        t = threading.Thread(target=self._process_data_events)
+        t.daemon = True
+        t.start()
 
-    def is_ready(self):
-        return self._ready
-
-    def set_ready(self):
-        self._ready = True
-
-    def on_exchange_declareok(self, unused_frame):
-        self.callback_queue = str(uuid.uuid4())
-        self.setup_queue(self.callback_queue, exclusive=True)
-        self._channel.basic_consume(
-            self.on_response, no_ack=True, queue=self.callback_queue)
-
-        self.set_ready()
-
-    def setup_queue(self,
-                    queue_name,
-                    callback=None,
-                    exchange=None,
-                    durable=False,
-                    exclusive=False,
-                    auto_delete=False):
-
-        if exchange is None:
-            exchange = self._exchange
-
-        self._channel.queue_declare(
-            None, queue_name, durable=durable, exclusive=exclusive,
-            auto_delete=auto_delete)
-        self._channel.queue_bind(callback, queue_name, exchange)
+    def _process_data_events(self):
+        """Check for incoming data events.
+        We do this on a thread to allow the flask instance to send
+        asynchronous requests.
+        It is important that we lock the thread each time we check for events.
+        """
+        self._channel.basic_consume(self.on_response, no_ack=True,
+                                    queue=self.callback_queue)
+        while True:
+            self._connection.process_data_events()
+            time.sleep(0.1)
 
     def on_response(self, channel, basic_deliver, props, body):
         ret = json.loads(body)
@@ -71,6 +49,20 @@ class RPCClient(Connector):
             ret = RemoteFunctionError(ret)
 
         self._results[props.correlation_id] = ret
+
+    def get_response(self, correlation_id, timeout=None):
+        stoploop = time.time() + timeout if timeout is not None else 0
+
+        self._connection.process_data_events()
+        while stoploop > time.time() or timeout is None:
+            self._connection.process_data_events()
+
+            if correlation_id in self._results:
+                return self._results.pop(correlation_id)
+
+            time.sleep(0.05)
+
+        raise RemoteCallTimeout()
 
     def publish_message(self, exchange, routing_key, body, headers=None):
         corr_id = str(uuid.uuid4())
@@ -86,16 +78,6 @@ class RPCClient(Connector):
             body=json.dumps(body))
 
         return corr_id
-
-    def get_response(self, correlation_id, timeout=None):
-        stoploop = time.time() + timeout if timeout is not None else 0
-
-        while stoploop > time.time() or timeout is None:
-            if correlation_id in self._results:
-                time.sleep(0.05)
-                return self._results.pop(correlation_id)
-
-        raise RemoteCallTimeout()
 
     def skip_response(self, correlation_id):
         self._results.pop(correlation_id, None)
@@ -113,7 +95,7 @@ class RPCClient(Connector):
             """
             ignore_result = kwargs.pop('ignore_result', False)
             exchange = kwargs.pop('exchange', self._exchange)
-            routing_key = kwargs.pop('routing_key', self.DEFUALT_QUEUE)
+            routing_key = kwargs.pop('routing_key', self._exchange)
             timeout = kwargs.pop('timeout', None)
 
             try:
