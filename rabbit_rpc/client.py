@@ -23,7 +23,6 @@ class RPCClient(object):
 
         self._exchange = exchange
         self._channel = self._connection.channel()
-        self._channel.exchange_declare(exchange=self._exchange)
         ret = self._channel.queue_declare(exclusive=True, auto_delete=True)
         self.callback_queue = ret.method.queue
 
