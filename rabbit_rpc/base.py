@@ -14,7 +14,7 @@ class Connector(object):
     DEFUALT_QUEUE = 'default'
     EXCHANGE_TYPE = 'direct'
 
-    def __init__(self, amqp_url, exchange='default'):
+    def __init__(self, amqp_url, exchange=''):
         self._url = amqp_url
         self._exchange = exchange
 

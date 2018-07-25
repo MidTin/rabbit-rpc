@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class RPCClient(object):
 
-    def __init__(self, amqp_url, exchange='default'):
+    def __init__(self, amqp_url, exchange=''):
         self._results = {}
         self._exchange = exchange
 
