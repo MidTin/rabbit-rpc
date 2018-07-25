@@ -99,7 +99,8 @@ class Connector(object):
         self._channel = channel
         self._channel.basic_qos(prefetch_count=10)
         self.add_on_channel_close_callback()
-        self.setup_exchange(self._exchange)
+        if self._exchange:
+            self.setup_exchange(self._exchange)
 
     def add_on_channel_close_callback(self):
         """This method tells pika to call the on_channel_closed method if
