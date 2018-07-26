@@ -14,7 +14,7 @@ class Connector(object):
     DEFUALT_QUEUE = 'default'
     EXCHANGE_TYPE = 'direct'
 
-    def __init__(self, amqp_url, exchange=''):
+    def __init__(self, amqp_url, exchange='default'):
         self._url = amqp_url
         self._exchange = exchange
 
@@ -100,7 +100,7 @@ class Connector(object):
         self._channel.basic_qos(prefetch_count=10)
         self.add_on_channel_close_callback()
         if self._exchange:
-            self.setup_exchange(self._exchange)
+            self.setup_exchange(self._exchange, True)
 
     def add_on_channel_close_callback(self):
         """This method tells pika to call the on_channel_closed method if
@@ -124,7 +124,7 @@ class Connector(object):
         logger.info('Channel closed..')
         self.close_connection()
 
-    def setup_exchange(self, exchange_name):
+    def setup_exchange(self, exchange_name, durable=False):
         """Setup the exchange on RabbitMQ by invoking the Exchange.Declare RPC
         command. When it is complete, the on_exchange_declareok method will
         be invoked by pika.
@@ -132,8 +132,9 @@ class Connector(object):
         :param str|unicode exchange_name: The name of the exchange to declare
 
         """
-        self._channel.exchange_declare(self.on_exchange_declareok,
-                                       exchange_name, self.EXCHANGE_TYPE)
+        self._channel.exchange_declare(
+            self.on_exchange_declareok,
+            exchange_name, self.EXCHANGE_TYPE, durable=durable)
 
     def on_exchange_declareok(self, unused_frame):
         """Invoked by pika when RabbitMQ has finished the Exchange.Declare RPC
