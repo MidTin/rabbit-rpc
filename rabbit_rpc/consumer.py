@@ -119,8 +119,8 @@ class MessageDispatcher(object):
         except Exception as ex:
             logger.exception(
                 'Error occurred when calling consumer. consumer: %s, args: %s, '
-                'kwargs: %s', consumer_name.name, args, kwargs)
-            ret = ex.message
+                'kwargs: %s', consumer.name, args, kwargs)
+            ret = str(ex)
             is_error = True
 
         if props.reply_to is not None:
