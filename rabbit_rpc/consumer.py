@@ -117,6 +117,9 @@ class MessageDispatcher(object):
             ret = consumer.consume(*args, **kwargs)
             is_error = False
         except Exception as ex:
+            logger.exception(
+                'Error occurred when calling consumer. consumer: %s, args: %s, '
+                'kwargs: %s', consumer_name.name, args, kwargs)
             ret = ex.message
             is_error = True
 
