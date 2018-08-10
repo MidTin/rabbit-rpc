@@ -126,3 +126,6 @@ class RPCClient(object):
             return self.call(consumer_name)
 
         return super(RPCClient, self).__getattribute__(key)
+
+    def __del__(self):
+        self.connection.close()
