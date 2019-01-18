@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 import os
 from setuptools import find_packages, setup
-import six
+import sys
+
+PY2 = sys.version_info[0] == 2
 
 with open(os.path.join(os.path.dirname(__file__), 'requirements.txt')) as f:
     requires = f.readlines()
-    if six.PY2:
+    if PY2:
         requires += ['futures==3.2.0', 'monotonic==1.5']
 
 with open(os.path.join(os.path.dirname(__file__), 'README.rst')) as f:
