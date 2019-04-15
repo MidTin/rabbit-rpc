@@ -5,13 +5,16 @@ import sys
 from .client import RPCClient
 from .server import RPCServer
 from .consumer import consumer, Consumer
+from .credentials import AliyunCredentialsProvider
 
 LOG_FORMAT = (
     '%(levelname)s %(asctime)s %(name)s %(funcName)s %(lineno)s: %(message)s')
 logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 
-
-__all__ = ['consumer', 'Consumer', 'RPCClient', 'RPCServer']
+__all__ = [
+    'consumer', 'Consumer', 'RPCClient', 'RPCServer',
+    'AliyunCredentialsProvider'
+]
 
 
 def main():
