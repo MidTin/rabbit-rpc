@@ -32,11 +32,13 @@ class RPCClient(object):
         self.connection = pika.BlockingConnection(self.conn_parameters)
         self.channel = self.connection.channel()
 
-        ret = self.channel.queue_declare(exclusive=True, auto_delete=True)
-        self.callback_queue = ret.method.queue
-        self.channel.queue_bind(self.callback_queue, self._exchange)
-        self.channel.basic_consume(
-            self.on_response, queue=self.callback_queue)
+    def setup_callback_queue(self):
+        if not hasattr(self, 'callback_queue'):
+            ret = self.channel.queue_declare(exclusive=True, auto_delete=True)
+            self.callback_queue = ret.method.queue
+            self.channel.queue_bind(self.callback_queue, self._exchange)
+            self.channel.basic_consume(
+                self.on_response, queue=self.callback_queue)
 
     def on_response(self, channel, basic_deliver, props, body):
         ret = json.loads(body)
@@ -88,6 +90,9 @@ class RPCClient(object):
             exchange = kwargs.pop('exchange', self._exchange)
             routing_key = kwargs.pop('routing_key', self._exchange)
             timeout = kwargs.pop('timeout', None)
+
+            if not ignore_result:
+                self.setup_callback_queue()
 
             try:
                 if timeout is not None:
