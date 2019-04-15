@@ -20,6 +20,7 @@ class RPCClient(object):
         self._results = {}
         self._exchange = exchange
         self.url = amqp_url
+        self.callback_queue = None
 
         if conn_parameters:
             self.conn_parameters = conn_parameters
@@ -33,7 +34,7 @@ class RPCClient(object):
         self.channel = self.connection.channel()
 
     def setup_callback_queue(self):
-        if not hasattr(self, 'callback_queue'):
+        if not self.callback_queue:
             ret = self.channel.queue_declare(exclusive=True, auto_delete=True)
             self.callback_queue = ret.method.queue
             self.channel.queue_bind(self.callback_queue, self._exchange)
