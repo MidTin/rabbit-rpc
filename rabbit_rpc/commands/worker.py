@@ -8,10 +8,12 @@ import os
 import sys
 import traceback
 
+import pika
 
-from .base import BaseCommand
 from rabbit_rpc.consumer import Consumer
+from rabbit_rpc.credentials import AliyunCredentialsProvider
 from rabbit_rpc.server import RPCServer
+from .base import BaseCommand
 
 logger = logging.getLogger(__name__)
 
@@ -32,12 +34,29 @@ class Worker(BaseCommand):
             help='specify the broker url')
         parser.add_argument(
             '--django', help='setup django')
+        parser.add_argument(
+            '--alicert', help='''
+            specify the certification of aliyun amqp in format:
+
+            [access_key]:[access_secret]:[resource_owner_id]
+            ''')
 
     def install_django(self, project_name):
         import django
 
         os.environ['DJANGO_SETTINGS_MODULE'] = project_name + '.settings'
         django.setup()
+
+    def parse_aliyun_cert(self, raw_cert):
+        try:
+            access_key, access_secret, resource_owner_id = raw_cert.split(':')
+        except ValueError:
+            raise ValueError('invalid alicert')
+
+        provider = AliyunCredentialsProvider(
+            access_key, access_secret, resource_owner_id)
+
+        return provider.get_username(), provider.get_password()
 
     def find_consumers(self, related_name='consumers'):
         path = os.getcwd()
@@ -66,17 +85,25 @@ class Worker(BaseCommand):
     def execute(self, **options):
         sys.path.append(os.getcwd())
 
-        if options.get('django'):
-            self.install_django(options['django'])
-
-        consumers = self.find_consumers()
-        if not consumers:
-            sys.stderr.write('No consumer was detected.\n')
-            sys.exit(1)
-
         try:
+            conn_parameters = pika.URLParameters(options['amqp'])
+
+            if options.get('django'):
+                self.install_django(options['django'])
+
+            if options.get('alicert'):
+                username, password = self.parse_aliyun_cert(options['alicert'])
+                conn_parameters.credentials = pika.PlainCredentials(
+                    username, password, erase_on_connect=True)
+
+            consumers = self.find_consumers()
+            if not consumers:
+                sys.stderr.write('No consumer was detected.\n')
+                sys.exit(1)
+
             server = RPCServer(
-                consumers, amqp_url=options['amqp'], queue=options['queue'])
+                consumers, conn_parameters=conn_parameters,
+                queue=options['queue'])
             server.run()
         except KeyboardInterrupt:
             server.stop()

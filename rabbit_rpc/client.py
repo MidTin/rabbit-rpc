@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
-import functools
 import logging
 import json
-import threading
 import time
 import uuid
 
@@ -16,16 +14,22 @@ logger = logging.getLogger(__name__)
 
 class RPCClient(object):
 
-    def __init__(self, amqp_url, exchange='default'):
+    def __init__(self, amqp_url=None, conn_parameters=None, exchange='default'):
+        assert any((amqp_url, conn_parameters)), 'must be provide amqp_url or conn_parameters'
+
         self._results = {}
         self._exchange = exchange
-
         self.url = amqp_url
+
+        if conn_parameters:
+            self.conn_parameters = conn_parameters
+        else:
+            self.conn_parameters = pika.URLParameters(self.url)
+
         self.connect()
 
     def connect(self):
-        parameters = pika.URLParameters(self.url)
-        self.connection = pika.BlockingConnection(parameters)
+        self.connection = pika.BlockingConnection(self.conn_parameters)
         self.channel = self.connection.channel()
 
         ret = self.channel.queue_declare(exclusive=True, auto_delete=True)

@@ -14,7 +14,9 @@ class Connector(object):
     DEFUALT_QUEUE = 'default'
     EXCHANGE_TYPE = 'direct'
 
-    def __init__(self, amqp_url, exchange='default'):
+    def __init__(self, amqp_url=None, conn_parameters=None, exchange='default'):
+        assert any((amqp_url, conn_parameters)), 'must be provide amqp_url or conn_parameters'
+
         self._url = amqp_url
         self._exchange = exchange
 
@@ -22,6 +24,11 @@ class Connector(object):
         self._connection = None
         self._queues = {}
         self._closing = False
+
+        if conn_parameters:
+            self.conn_parameters = conn_parameters
+        elif amqp_url:
+            self.conn_parameters = pika.URLParameters(self._url)
 
     def connect(self):
         """This method connects to RabbitMQ, returning the connection handle.
@@ -32,7 +39,7 @@ class Connector(object):
 
         """
         return pika.SelectConnection(
-            pika.URLParameters(self._url),
+            self.conn_parameters,
             on_open_callback=self.on_connection_open,
             on_close_callback=self.on_connection_closed,
             stop_ioloop_on_close=False)
