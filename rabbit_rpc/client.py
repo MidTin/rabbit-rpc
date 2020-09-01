@@ -35,11 +35,13 @@ class RPCClient(object):
 
     def setup_callback_queue(self):
         if not self.callback_queue:
-            ret = self.channel.queue_declare(exclusive=True, auto_delete=True)
+            ret = self.channel.queue_declare(
+                '', exclusive=True, auto_delete=True)
             self.callback_queue = ret.method.queue
             self.channel.queue_bind(self.callback_queue, self._exchange)
             self.channel.basic_consume(
-                self.on_response, queue=self.callback_queue)
+                queue=self.callback_queue,
+                on_message_callback=self.on_response)
 
     def on_response(self, channel, basic_deliver, props, body):
         ret = json.loads(body)

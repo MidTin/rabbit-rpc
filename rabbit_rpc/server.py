@@ -16,7 +16,7 @@ class RPCServer(Connector):
 
         super(RPCServer, self).__init__(*args, **kwargs)
 
-    def on_exchange_declareok(self, unused_frame):
+    def on_exchange_declareok(self, unused_frame, userdata):
         self.setup_queues()
 
     def _setup_queue(self, queue_name):
@@ -56,8 +56,8 @@ class RPCServer(Connector):
 
         # setup the queue on RabbitMQ
         for queue_name in self._queues.keys():
-            self._channel.queue_declare(None, queue=queue_name, durable=True)
-            self._channel.queue_bind(None, queue_name, exchange=self._exchange)
+            self._channel.queue_declare(queue=queue_name, durable=True)
+            self._channel.queue_bind(queue_name, exchange=self._exchange)
 
         self.start_consuming()
 
@@ -65,8 +65,8 @@ class RPCServer(Connector):
         self._channel.add_on_cancel_callback(self.on_consumer_cancelled)
 
         for queue in self._queues.values():
-            consumer_tag = self._channel.basic_consume(queue.dispatcher,
-                                                       queue.name)
+            consumer_tag = self._channel.basic_consume(
+                queue.name, queue.dispatcher)
             queue.dispatcher.consumer_tag = consumer_tag
 
         logger.info(self._queues)

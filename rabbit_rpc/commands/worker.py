@@ -131,7 +131,7 @@ def find_related_module(package, related_name):
 
     try:
         imp.find_module(related_name, pkg_path)
-    except ImportError:
+    except ImportError as e:
         return
 
     return importlib.import_module('{0}.{1}'.format(package, related_name))

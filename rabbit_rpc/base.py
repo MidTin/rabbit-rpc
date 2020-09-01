@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
+import functools
 from threading import Lock
 
 import pika
@@ -41,8 +42,7 @@ class Connector(object):
         return pika.SelectConnection(
             self.conn_parameters,
             on_open_callback=self.on_connection_open,
-            on_close_callback=self.on_connection_closed,
-            stop_ioloop_on_close=False)
+            on_close_callback=self.on_connection_closed)
 
     def on_connection_open(self, unused_connection):
         """This method is called by pika once the connection to RabbitMQ has
@@ -116,7 +116,7 @@ class Connector(object):
         """
         self._channel.add_on_close_callback(self.on_channel_closed)
 
-    def on_channel_closed(self, channel, reply_code, reply_text):
+    def on_channel_closed(self, channel, reply_code):
         """Invoked by pika when RabbitMQ unexpectedly closes the channel.
         Channels are usually closed if you attempt to do something that
         violates the protocol, such as re-declare an exchange or queue with
@@ -135,15 +135,19 @@ class Connector(object):
         """Setup the exchange on RabbitMQ by invoking the Exchange.Declare RPC
         command. When it is complete, the on_exchange_declareok method will
         be invoked by pika.
-
         :param str|unicode exchange_name: The name of the exchange to declare
-
         """
+        # Note: using functools.partial is not required, it is demonstrating
+        # how arbitrary data can be passed to the callback when it is called
+        cb = functools.partial(
+            self.on_exchange_declareok, userdata=exchange_name)
         self._channel.exchange_declare(
-            self.on_exchange_declareok,
-            exchange_name, self.EXCHANGE_TYPE, durable=durable)
+            exchange=exchange_name,
+            exchange_type=self.EXCHANGE_TYPE,
+            durable=durable,
+            callback=cb)
 
-    def on_exchange_declareok(self, unused_frame):
+    def on_exchange_declareok(self, unused_frame, userdata):
         """Invoked by pika when RabbitMQ has finished the Exchange.Declare RPC
         command.
 
